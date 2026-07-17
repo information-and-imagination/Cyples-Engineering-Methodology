@@ -9,6 +9,7 @@ Projects developed using CEM begin with a **Vision**, progress through **Concept
 This repository documents the methodology, its guiding principles, reusable templates, and practical examples. It serves as the foundation for engineering projects developed under the Information & Imagination organization.
 
 
+```text
 Vision
     │
     ▼
@@ -25,3 +26,4 @@ System Architecture
     │
     ▼
 Generated Project
+```
