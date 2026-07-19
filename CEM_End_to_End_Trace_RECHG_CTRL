@@ -1,0 +1,109 @@
+# CEM — End-to-End Trace: Recharging Controller
+
+A single leaf run through every stage, start to finish, to see whether the pipeline actually holds together
+in practice. Assumes Battery Source (`PWR.SUPPLY.BATT`) has already been through its own Decision Record,
+since Recharging Controller's Requirements row lists it as a dependency.
+
+---
+
+## Stage 1 — Concept Architecture
+
+```
+Node:          Recharging Controller
+Node ID:       PWR.RECHG.CTRL
+Tree:          Power Supply → Recharging Infrastructure → Recharging Controller
+Concept Ver.:  PWR-v1
+```
+(From CYPMECH 001, page 5 — unchanged since the original 2007 diagram.)
+
+## Stage 2 — Requirements
+
+| Field | Value |
+|---|---|
+| Node ID | `PWR.RECHG.CTRL` |
+| Node | Recharging Controller |
+| Concept Version | `PWR-v1` |
+| Performance | Needed |
+| Interface | Needed |
+| Constraint | Needed |
+| Make-vs-Buy | Needed |
+| Depends On | `PWR.SUPPLY.BATT` |
+| Status | `DR:PWR.RECHG.CTRL:001` *(updated once the Decision Record below exists — starts as Open)* |
+| Notes | Suspect COTS — good early Decision Record candidate |
+
+## Stage 3 — Decision Records
+
+```
+Decision ID:        DR:PWR.RECHG.CTRL:001
+Node ID:            PWR.RECHG.CTRL
+Concept Version:    PWR-v1
+
+Candidates Considered:
+  (a) Off-the-shelf smart charger module
+  (b) Custom board: bare BMS chip + PCB
+  (c) Repurposed hobby RC charger
+
+Criteria Used:
+  - Cost
+  - Certification / safety (relevant given this touches battery charging)
+  - Lead time
+  - Compatibility with the battery chosen in DR:PWR.SUPPLY.BATT:001
+    (24V pack, 3A max charge rate)
+
+Chosen:             (a) Off-the-shelf smart charger module,
+                     24V / 3A rated, safety-certified
+
+Reason:              Certification cost of a custom board exceeds savings
+                     at this build volume; the COTS module already carries
+                     the relevant safety certification.
+
+Reversibility Note:  Swapping this later only affects the connector/pinout
+                     recorded in System Architecture. Concept Architecture
+                     and Requirements are untouched either way.
+
+Evidence Required:
+  [ ] Datasheet
+  [ ] Safety certification (UL/CE or equivalent)
+  [ ] Bench test at rated voltage/current
+  [ ] Compatibility check against the chosen battery pack
+
+Decision Status:     Open → Candidate Evaluation → Selected →
+                     Evidence Collected → Verified → Released
+```
+
+## Stage 4 — System Architecture
+
+```
+Task ID:      SA:DR:PWR.RECHG.CTRL:001
+Type:         Buy   (inherited from the Decision Record's Make-vs-Buy call)
+
+Material list:
+  M01 — 24V/3A smart charger module, qty needed: 1
+        Stock: 0 → Source Type: Buy → no further decomposition needed
+        (a finished COTS item — nothing to recurse into)
+
+Task Status:  Open → Sourcing → Fulfilled (ordered and purchased) →
+              Received/Verified (module received, bench-tested against
+              the Evidence Required checklist) → Complete
+```
+
+---
+
+## What this exposes, actually running it
+
+**Holds together:** the chain traces cleanly — Node ID → Requirements row → Decision ID → Task ID — without
+ever needing to edit Concept Architecture or Requirements to get here. `Depends On` did real work: Recharging
+Controller's Decision Record genuinely couldn't set its Criteria Used until Battery Source's decision existed,
+because "compatibility with the chosen battery" isn't knowable until a battery has actually been chosen.
+
+**A gap this surfaced, not one I already had an answer for:** Recharging Controller's Decision Record needed
+to reference Battery Source's Decision Record specifically — not just its Node ID. Right now nothing in the
+Decision Records spec formally supports one Decision Record citing another; I wrote "compatibility with the
+battery chosen in `DR:PWR.SUPPLY.BATT:001`" straight into the Reason/Criteria prose above because there's
+nowhere structured to put it. That's the same problem `Depends On` solved for Requirements, one stage later —
+Decision Records may need its own **Depends On Decision** field (distinct from the Requirements-level one)
+so a decision can point at the specific decision it relied on, not just the node.
+
+That's a genuine finding from actually running the example, not a hypothetical — worth deciding before this
+pattern repeats across more of the tree. Want me to add that field to the Decision Records spec now, or hold
+it until more of the tree is run through and you can see how often it actually comes up?
