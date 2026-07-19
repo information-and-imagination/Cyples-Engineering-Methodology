@@ -1,0 +1,140 @@
+# CEM — Requirements Stage Specification
+
+This document defines the Requirements stage as a general, reusable part of the Cyples Engineering
+Methodology (CEM) pipeline. It is domain-independent — the same rules apply whether the system being
+described is mechanical, electrical, software, or any mix. A worked example applying this spec to a
+concrete project lives separately (see `CEM_Requirements_Worked_Example.md`).
+
+```
+Vision
+    │
+    ▼
+Concept Architecture
+    │
+    ▼
+Requirements   ← this document
+    │
+    ▼
+Decision Records
+    │
+    ▼
+System Architecture
+    │
+    ▼
+Generated Project
+```
+
+## 1. Purpose
+
+Concept Architecture answers: *what functional resources does this system need?* — a technology-independent
+decomposition of the system into named subsystems and leaves, with no hardware or software specifics attached.
+
+Requirements answers: *what will have to be determined about each resource before it can be decided or
+bought?* It is a manifest of what's needed, not a spec sheet. It exists to guarantee nothing gets skipped, and
+to make explicit how much is still unknown, without pretending to know it yet.
+
+Requirements never contains hardware specs, part numbers, voltages, protocols, or vendor detail. That
+information belongs to System Architecture, and only appears there after a Decision Record has resolved which
+candidate was chosen. This separation is what allows Concept Architecture to remain stable while real-world
+implementation details change underneath it.
+
+## 2. Scope: one row per leaf
+
+Every leaf in a Concept Architecture tree gets exactly one Requirements row. A row is not "resolved" at this
+stage — resolution happens later, in Decision Records and System Architecture. At the Requirements stage,
+every row is expected to be honestly incomplete.
+
+## 3. Node ID
+
+Every row is identified by a **Node ID**: a short, structured identifier generated automatically from the
+node's position in its Concept Architecture tree (e.g. `PWR.RECHG.CTRL` for a node nested under a Power
+Supply subsystem's Recharging Infrastructure branch).
+
+- Node IDs are **positional**, not assigned by hand, and always reflect current tree structure.
+- Two nodes may share a human-readable display name (e.g. "Communications" appearing under two different
+  subsystems) — the Node ID disambiguates them without forcing an artificial rename.
+- Node IDs are the only safe way to reference one row from another (see Depends On, §6).
+
+## 4. Concept Version
+
+Every row also records the **version of the subsystem's Concept Architecture document it was written
+against** (e.g. `PWR-v1`).
+
+Versioning rules:
+
+- **Version scope is per-subsystem, never whole-project.** A structural change to one subsystem's tree bumps
+  only that subsystem's version. Other subsystems are unaffected and stay on their current versions.
+- **Only a structural change bumps the version.** Structural change means a node is added, removed, or
+  re-nested — the tree shape changes. Adding new information to an existing node (e.g. an interface detail
+  discovered downstream) is not structural and does not require a version bump; it can be edited in place.
+- **A `Depends On` value changing is not a structural change**, even though it references another node — the
+  tree shape hasn't moved.
+- **No separate deletion log or changelog mechanism is needed.** Because this documentation lives in version
+  control, the prior version is preserved in history rather than overwritten. The version bump plus the commit
+  itself is the record of what changed; CEM does not need its own changelog format on top of that.
+
+The Concept Version field lets anyone filter for every Requirements row that needs re-review after a
+subsystem's structure changes, rather than re-reading the entire table.
+
+## 5. Requirement flags
+
+Four flags per row, each set to **Needed**, **N/A**, or (later) resolved with a decision reference:
+
+| Flag | What it will eventually pin down |
+|---|---|
+| **Performance** | The measurable behavior this leaf must deliver |
+| **Interface** | What it must physically/electrically/logically connect to |
+| **Constraint** | Ceilings — cost, power, size, weight — that bound the eventual choice |
+| **Make-vs-Buy** | Whether this becomes a purchased component, an integrated library/module, or custom-built |
+
+A flag may legitimately be **N/A** (e.g. Make-vs-Buy doesn't apply to a node that will obviously always be
+custom-fabricated). A blank flag is not a legitimate state — every flag must be explicitly set.
+
+## 6. Depends On
+
+A field listing the Node ID(s) of any other row that must be resolved before this row can be. Defaults to
+**N/A** automatically; only populated when a real dependency exists.
+
+- This is a **lateral** relationship between rows, distinct from the **vertical** containment relationship
+  already expressed by Concept Architecture's tree structure. The two are never conflated or given the same
+  name — containment answers "what's inside what," Depends On answers "what must be decided first."
+- Depends On stays a simple flat field. The Requirements document is treated as a database: at scale,
+  dependency chains are handled by filtering/querying the field, not by a dedicated visual representation. A
+  diagram may still be produced to explain any one relationship to a person, but the table is the source of
+  truth.
+
+## 7. Status
+
+Every row carries a Status field. At the Requirements stage this starts as **Open**. Once a Decision Record
+exists for this row, Status changes to that record's Decision ID (e.g. `DR:PWR.RECHG.CTRL:001`) rather than a
+generic label — the row always points to the specific record responsible for resolving it, not just a state
+name. If that Decision Record is later superseded (see the Decision Records spec, §7), Status is updated to
+the superseding Decision ID.
+
+## 8. Notes
+
+A free-text field for soft, non-binding observations — assumptions, open ambiguities, suggested sequencing.
+Nothing in Notes is authoritative; anything that needs to be relied upon belongs in one of the structured
+fields above instead.
+
+## 9. Row schema (summary)
+
+| Field | Required | Notes |
+|---|---|---|
+| Node ID | Yes | Auto-generated, positional |
+| Node (display name) | Yes | Human-readable; not guaranteed unique |
+| Concept Version | Yes | Which version of the subsystem's Concept doc this row reflects |
+| Performance | Yes | Needed / N/A |
+| Interface | Yes | Needed / N/A |
+| Constraint | Yes | Needed / N/A |
+| Make-vs-Buy | Yes | Needed / N/A |
+| Depends On | Yes | Node ID(s) or N/A (default) |
+| Status | Yes | Open, or the Decision ID once one exists |
+| Notes | Optional | Non-binding |
+
+## 10. Handoff to Decision Records
+
+Decision Records is where a row's flags get answered against real-world candidates, a Make-vs-Buy call gets
+made, and the reasoning is kept. Depends On tells Decision Records which rows are eligible to be resolved
+first. Requirements itself is never edited to reflect a decision outcome — only Status changes, from Open to
+the Decision ID that now owns this row.
