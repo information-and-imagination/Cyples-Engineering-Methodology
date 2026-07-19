@@ -1,0 +1,118 @@
+# CEM — Decision Records Stage Specification
+
+This document defines the Decision Records stage as a general, reusable part of the CEM pipeline. It sits
+between Requirements and System Architecture, and is domain-independent in the same sense the Requirements
+spec is — the same rules apply whether the decision is which battery chemistry to use, which library to
+import, or which vendor to contract.
+
+```
+Requirements
+    │
+    ▼
+Decision Records   ← this document
+    │
+    ▼
+System Architecture
+```
+
+## 1. Purpose
+
+Requirements asks: *what needs to be decided?*
+Decision Records asks: *why did we choose this, and how do we know we chose correctly?*
+
+A Decision Record is the moment a Requirements row's flags (Performance, Interface, Constraint, Make-vs-Buy)
+get matched against real-world candidates, a choice gets made, and the reasoning — along with what it would
+take to trust that choice — is kept. It is not the implementation detail itself; that's System Architecture's
+job, and only gets written once a Decision Record reaches its final lifecycle state.
+
+## 2. Scope
+
+A Requirements row may have **one or more** Decision Records over its life. Most rows will have exactly one.
+A row gets a second Decision Record when the first one is invalidated by something outside the project's
+control — a part goes obsolete, a regulation changes, a vendor disappears — not by editing the original
+record, but by creating a new one and linking it (see §7, Supersession). Nothing is deleted; the old record
+stays in history, same as a superseded Concept Architecture version.
+
+## 3. Decision ID
+
+Every Decision Record is identified by a **Decision ID**, structured as `DR:<Node ID>:<sequence>`
+(e.g. `DR:PWR.RECHG.CTRL:001`). The sequence number increments if a node is ever re-decided. Decision IDs are
+the reference a Requirements row's Status field points to once a decision exists for it.
+
+## 4. Fields
+
+| Field | Required | Notes |
+|---|---|---|
+| Decision ID | Yes | `DR:<Node ID>:<sequence>` |
+| Node ID | Yes | Back-reference to the Requirements row this resolves |
+| Concept Version | Yes | Copied from the Requirements row at time of decision — lets you detect if the decision was made against a since-superseded structure |
+| Candidates Considered | Yes | Every option actually examined, not just the winner |
+| Criteria Used | Yes | Which dimensions mattered for comparison — typically drawn from the row's Performance/Interface/Constraint/Make-vs-Buy flags, plus anything else that mattered (lead time, vendor relationship, etc.) |
+| Chosen | Yes | The selected candidate |
+| Reason | Yes | One-line rationale — why this candidate over the others |
+| Reversibility Note | Yes | What breaks, and where, if this decision is later reversed |
+| Evidence Required | Yes | Checklist of what must be true before the decision is trusted (see §5) |
+| Decision Status | Yes | Lifecycle state (see §6) |
+| Author / Date | Yes | Who decided, when |
+| Supersedes / Superseded By | Conditional | Links to the prior/next Decision Record for this Node ID, if any |
+
+## 5. Evidence Required
+
+A checklist of what has to be true before this decision is considered trustworthy — e.g. Datasheet, Test
+Result, CAD Model, Simulation, Certification, Customer Approval. Items are chosen per decision, not fixed
+per node type.
+
+This field belongs here, not in Requirements, because it describes the chosen solution, not the abstract
+need. At the Requirements stage there is nothing yet to demand proof about; "Evidence Required" only becomes
+meaningful once a specific candidate has been named as Chosen.
+
+## 6. Decision Status (lifecycle)
+
+```
+Open
+  │
+  ▼
+Candidate Evaluation
+  │
+  ▼
+Selected
+  │
+  ▼
+Evidence Collected
+  │
+  ▼
+Verified
+  │
+  ▼
+Released
+```
+
+| State | Meaning |
+|---|---|
+| **Open** | Row has been picked up from Requirements; no candidates gathered yet |
+| **Candidate Evaluation** | Candidates are being compared against Criteria Used |
+| **Selected** | Chosen is populated, Reason is written — but nothing has been proven yet |
+| **Evidence Collected** | Items in Evidence Required have been gathered |
+| **Verified** | Collected evidence has been reviewed and confirmed sufficient |
+| **Released** | Decision is final; System Architecture may now record the implementation detail |
+
+A Decision Record only feeds System Architecture once it reaches **Released**. Nothing upstream of that state
+should be treated as settled, even if a candidate has been named.
+
+## 7. Supersession
+
+If a Released decision is later invalidated by something external to the project, the response is a **new**
+Decision Record, not an edit to the old one:
+
+- The new record gets the next sequence number for that Node ID (`DR:PWR.SUPPLY.BATT:002`).
+- The old record's `Superseded By` field points to the new one; the new record's `Supersedes` field points back.
+- The old record is left exactly as it was — it remains an accurate account of what was true and decided at
+  the time. Nothing about supersession implies the original decision was wrong given what was known then.
+
+## 8. Handoff to System Architecture
+
+Once a Decision Record reaches **Released**, System Architecture records the actual implementation detail for
+the Chosen candidate — part number, pinout, library version, or equivalent. System Architecture never makes a
+choice itself; it only documents the outcome of a Released Decision Record. If a decision is later superseded,
+System Architecture is updated to match the new Released record, and the change traces cleanly back through
+both Decision Records to the Requirements row that started it.
