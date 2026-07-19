@@ -10,7 +10,7 @@ This repository documents the methodology, its guiding principles, reusable temp
 
 ## Why architecture-first?
 
-Writers roughly split into two camps. Some write "seat of the pants" — they discover the story by drafting it, and if a scene turns out wrong, the fix is cheap: rewrite the paragraph. Others outline first, because for them discovering the story's shape mid-draft is expensive — wasted chapters, plot holes, character arcs that have to be unwound and rebuilt.
+Writers roughly split into two camps. Some write "seat of the pants" — they discover the story by drafting it, and if a scene turns out wrong, the fix is cheap: rewrite the paragraph. Others outline first, because for them discovering the story's shape mid-draft is expensive — wasted chapters, plot holes, character arcs that have to be unwound and rebuilt. For engineers, discovering structural problems late is dramatically more expensive.
 
 Engineering projects — especially ones that mix hardware and software — don't get the pantser's cheap revisions. You can't "rewrite the paragraph" once a part has been milled or a board has been fabricated. CEM exists for exactly that reason: it's an outline for the thing you're about to build, written because discovering structure after money's been spent is far more expensive than discovering it on paper first.
 
