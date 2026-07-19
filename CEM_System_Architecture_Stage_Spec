@@ -1,0 +1,131 @@
+# CEM — System Architecture Stage Specification
+
+This document defines System Architecture as a general, reusable part of the CEM pipeline. Unlike the earlier
+stages, it is not primarily a document to write — it is a **task tree generated from Released Decision
+Records**, where each task's job is to find or fabricate the actual thing a decision called for, and record
+what was found or built.
+
+```
+Decision Records
+    │
+    ▼
+System Architecture   ← this document
+    │
+    ▼
+Generated Project
+```
+
+## 1. Purpose
+
+Decision Records answers: *why was this chosen, and is the choice trustworthy?*
+System Architecture answers: *how does the chosen thing actually get into existence — sourced or built?*
+
+A System Architecture Task never re-argues why something was chosen — that stays in Decision Records,
+referenced by ID. A task only ever describes fulfillment: locate a vendor part, or build a thing from
+materials, some of which may themselves need to be located or built.
+
+## 2. Task generation
+
+Exactly one top-level **Task** is generated per **Released** Decision Record — not per Requirements row, and
+not before Released. Before a decision is Released there is nothing concrete enough to task out yet (see the
+Decision Records spec, §6).
+
+A task's **Type** — **Buy** or **Make** — is inherited directly from the Decision Record's Make-vs-Buy flag.
+
+## 3. Materials and recursion
+
+Every task carries a **material list**:
+
+- A **Buy** task's material list has exactly one line: the finished item itself.
+- A **Make** task's material list is the actual bill of materials — every part or raw material the build
+  consumes.
+
+Each material line has a **Source Type**, resolved *per quantity*, not per line as a whole:
+
+| Source Type | Meaning |
+|---|---|
+| **Stock** | Already on hand — covers as much of the needed quantity as is actually available |
+| **Buy** | Remaining quantity not covered by Stock is purchased directly |
+| **Make** | Remaining quantity not covered by Stock requires its own fabrication step |
+
+**If any quantity remains unfulfilled by Stock, that remainder spawns a child Task** (Buy or Make, matching
+the material's Source Type), scoped only to the shortfall quantity — not the full requirement. A child task
+has exactly the same structure as any other task: its own Type, its own material list, and its own children
+if its materials in turn need sourcing. This is what makes System Architecture a genuine multi-level BOM
+rather than a flat list — recursion bottoms out only when every remaining material line is fully covered by
+Stock or is a directly-sourceable Buy with no further decomposition.
+
+### Worked micro-example
+
+Recharging Controller (`DR:PWR.RECHG.CTRL:001`, Type: Make) needs 20 units of a connector housing as one of
+its materials. 3 are already in stock.
+
+```
+Task  SA:DR:PWR.RECHG.CTRL:001              (Make)
+  └─ Material  ...M01  Connector housing, qty needed: 20
+       Stock: 3  →  covers 3
+       Remainder: 17  →  Source Type: Buy  →  spawns child task
+           └─ Task  SA:DR:PWR.RECHG.CTRL:001/M01/T01     (Buy, qty: 17)
+```
+
+Only the shortfall (17) is tasked out. The 3 in stock never re-enter the sourcing process.
+
+## 4. IDs
+
+- **Task ID:** `SA:<Decision ID>` for a top-level task (e.g. `SA:DR:PWR.RECHG.CTRL:001`).
+- **Material ID:** `<Task ID>/M<sequence>` (e.g. `SA:DR:PWR.RECHG.CTRL:001/M01`).
+- **Child Task ID:** `<Material ID>/T<sequence>` (e.g. `.../M01/T01`), used when a material's remainder needs
+  its own fabrication or purchasing step. A child task's own materials continue the same pattern one level
+  deeper, however many levels the BOM actually requires.
+
+Reading a full ID top to bottom shows the entire lineage from Decision Record to the deepest raw material.
+
+## 5. Task Status (lifecycle)
+
+```
+Open
+  │
+  ▼
+Sourcing
+  │
+  ▼
+Partially Fulfilled
+  │
+  ▼
+Fulfilled
+  │
+  ▼
+Received / Verified
+  │
+  ▼
+Complete
+```
+
+| State | Meaning |
+|---|---|
+| **Open** | Task generated, not yet started |
+| **Sourcing** | Actively searching (Buy) or building (Make) |
+| **Partially Fulfilled** | Some material lines resolved, others still have open child tasks |
+| **Fulfilled** | Every material line is covered — all child tasks Complete or lines were Stock/direct-Buy |
+| **Received / Verified** | The fulfilled item has been physically received or the build physically confirmed |
+| **Complete** | Task closed; feeds the Generated Project artifact record |
+
+**Task Status is not the same gate as Decision Records' Evidence Required.** Evidence Required asks whether
+the *decision* is trustworthy (certification, test results, approvals). Task Status asks whether the *thing*
+has been sourced or built yet. A task can reach Fulfilled — the part is in hand — while its parent Decision
+Record's Evidence Required checklist is still incomplete (e.g. certification hasn't arrived). The two are
+tracked independently and both must clear before a project can be considered done.
+
+## 6. What System Architecture never contains
+
+- No re-statement of why a candidate was chosen — that's a reference to the Decision ID, not a repeated
+  Reason field.
+- No editing of upstream Requirements or Concept Architecture. If a task discovers that a chosen candidate
+  can't actually be sourced or built as specified, that is fed back as a new Decision Record (see the Decision
+  Records spec, §7, Supersession) — never as a silent change here.
+
+## 7. Handoff to Generated Project
+
+Once every top-level task reaches Complete, the collected material and build records for a subsystem become
+its entry in the Generated Project artifact set — the actual BOM, vendor list, and/or build documentation that
+a person or downstream tool (CAD, PLC, code generator) consumes.
