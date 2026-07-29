@@ -1,5 +1,7 @@
 # Bit More Info
 
+#ChatGPT:
+
 Something I realized tonight
 
 Originally I thought CEM was mostly about generating better software.
@@ -38,7 +40,11 @@ The knowledge shouldn't have to be.
 
 And that's probably why HRM is such a good proving ground for CEM. HRM isn't something you'll "finish" in a few months. It's the kind of project you'll likely keep refining for years, adding new capabilities as your needs evolve. That's exactly the kind of environment where having your reasoning, terminology, and architectural decisions preserved becomes far more valuable than simply having the source code.
 
+#ME:
+
 and with any luck the evoling will be done mostly by ai, so I just need to say, hey I think I need to track this now. and work/claude/codex/ whoever can help make it happen if not get it all done and tested
+
+#ChatGPT:
 
 I think that's a realistic vision, with one important nuance.
 
@@ -141,7 +147,11 @@ That keeps the project's direction intentional. AI can propose changes anywhere,
 
 In a way, CEM becomes the long-term memory of the project, and the AI becomes the implementation engine. The better the memory, the better the implementation. Given how you've been structuring HRM and your other long-term projects, that combination seems like a natural evolution of the workflow you're building.
 
+#Me:
+
 yeah and I know before I started coding in school, the instructor first had us write up the steps by hand, instructor checked work, then a flow chart, instructor checked the work, then we could write up the "code" and then go to the keypunch and create the program and the sample data records we had to use to test each condition.
+
+#ChatGPT:
 
 I actually think that experience has had a bigger influence on your thinking than either of us realized until tonight.
 
