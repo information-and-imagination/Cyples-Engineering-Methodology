@@ -23,16 +23,15 @@ Vision
 Concept Architecture
     │
     ▼
-Requirements
-    │
-    ▼
-Decision Records
-    │
-    ▼
 System Architecture
     │
-    ▼
-Generated Project
+    ├───────────────┐
+    ▼               ▼
+Requirements    Decision Records
+    │               │
+    └───────┬───────┘
+            ▼
+    Generated Project
 ```
 
 ## About
